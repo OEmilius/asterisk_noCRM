@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Incoming calls</title>
+<style type="text/css">
+html{font:12px tahoma, sans-serif;}
+
+table {
+    //background-color: #aaa;
+	border-color: #f00;
+}
+thead {
+	//width: 600px;
+}
+
+tbody {
+    //background-color: #ddd;
+	//width: 1000px;
+    //height: 600px;
+    overflow-y: auto;
+
+}
+td {
+    padding: 1px 1px;
+	border: 1px;
+	border:1px solid #369;
+}
+
+
+thead, tbody{display:block;}
+
+
+sup{padding-left:4px;font-size:12px;color:#678;}
+thead td{background:#ccf;}
+tfoot td{background:#cfc;}
+caption{padding:5px;white-space:nowrap;border:1px solid #d30;background:#ffc;}
+</style>
+
+
+<script type="text/javascript">
+var ws;
+function send() {
+	var m = document.msgform.message.value;
+	console.log("send:" + m);
+	ws.send(m);
+	return false;
+};
+
+function init() {
+	console.log("init")
+	if (ws != null) {
+		ws.close();
+		ws = nill;
+	}
+	var msg = document.getElementById("msg");
+	ws = new WebSocket("ws://{{.Host}}/ws");
+	ws.onopen = function() {
+		console.log("WebSocket opened")
+	};
+	ws.onclose = function(evt) {
+		console.log("connection close");
+	};
+	ws.onmessage = function(evt) {
+		tr = tbl.insertRow();
+		tr.innerHTML = evt.data
+		if (tbl.rows.length > 400) tbl.deleteRow(1); //
+	};
+
+}
+
+//(function() {
+//    var data = document.getElementById("fileData");
+//	var conn = new WebSocket("ws://{{.Host}}/ws");
+//	conn.onopen = function() {
+//		console.log("web socket opened")
+//	}
+//	conn.onclose = function(evt) {
+//        //data.textContent += 'Connection closed';
+//		console.log("Connnection close");
+//    }
+//    conn.onmessage = function(evt) {
+//        //console.log('new data from server');
+//        //data.textContent += evt.data;
+//		//console.log(evt.data);
+//		tr = tbl.insertRow();
+//		tr.innerHTML = evt.data
+//		//td = tr.insertCell();
+//		//td = tr.insertCell(); td.innerHTML = evt.data;
+//		if (tbl.rows.length > 4000) tbl.deleteRow(1); //
+//    }
+//})();
+</script>
+
+
+</head>
+<body onLoad="init();">
+<div>{{.Data}}</div>
+<div id="textdata">поступающие входящие вызовы</div>
+
+<div>
+<!--<form name="msgform" action="#" onsubmit="return send();">
+<label for="numberfield">Filter sip.to contains</label>
+<input name="message" placeholder="1234567890"/>
+<input type="submit" value="send">
+</form>-->
+</div>
+
+<hr>
+<table id="tbl">
+<!--<thead>
+<tr><td>No</td><td>Time</td><td>Src</td><td>Dst</td><td>Protocol</td><td>Info</td></tr>
+</thead>-->
+<tbody>
+<tr id="row1"><td></td></tr>
+<!--<tr><td>2</td></tr>
+<tr><td>3</td></tr>
+<tr><td>4</td><td>ddddd</td></tr>-->
+</tbody>
+</table>
+<hr>
+
+
+
+</body>
+</html>

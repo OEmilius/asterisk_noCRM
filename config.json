@@ -1,0 +1,10 @@
+{
+	"Mysql_connect_string": "root@tcp(localhost:3306)/freeswitch",
+	"WebHost_port": "127.0.0.1:8888",
+	"Ami_host_port": "192.168.0.55:5038",
+	"Ami_Username": "amiuser",
+	"Ami_Secret": "password",
+	"Context_old": "call-to-world",
+	"Context": "office",
+	"end_config": "end"
+}

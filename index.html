@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>AsteriskNoCRM</title>
+<style type="text/css">
+html{font:12px tahoma, sans-serif;}
+
+</style>
+
+
+<script type="text/javascript">
+var ws;
+function send() {
+	var m = document.msgform.message.value;
+	console.log("send:" + m);
+	ws.send("regexp:" + m);
+	return false;
+};
+
+function setCookie(name, value)  {
+	var today = new Date();
+	var expiry = new Date(today.getTime() + 30 * 24 * 3600 * 1000); // plus 30 days
+    document.cookie=name + "=" + escape(value) + "; path=/; expires=" + expiry.toGMTString();
+};
+
+function getCookie(name) {
+  var matches = document.cookie.match(new RegExp(
+    "(?:^|; )" + name.replace(/([\.$?*|{}\(\)\[\]\\\/\+^])/g, '\\$1') + "=([^;]*)"
+  ));
+  return matches ? decodeURIComponent(matches[1]) : undefined;
+};
+
+function sendPhone() {
+	var m = document.frm_myPhone.message.value;
+	setCookie("MyPhone", m)
+	console.log("myPhone:" +m);
+	ws.send("myphone:"+m);
+	return false;
+};
+
+function dial_history(to) {
+	console.log("to______", to);
+	var a = document.frm_myPhone.message.value;
+	ws.send("dial:"+a+"t"+to);
+};
+
+function dial() {
+	var from = document.frm_myPhone.message.value;
+	var to = document.frm_dial.message.value;
+	console.log("dial:"+from + to);
+	ws.send("dial:"+from+"t"+to);
+	mytr = tbl.insertRow(1);
+	mytr.insertCell();
+	mytr.insertCell();
+	mytr.insertCell();
+	mytr.insertCell();
+	mytr.insertCell();
+	mytr.cells[0].innerHTML = "Out->";
+	mytr.cells[1].innerHTML = Date();
+	mytr.cells[2].innerHTML = to;
+	var btn = document.createElement ('input');
+	btn.type = 'button';
+	btn.value = "✆";
+	//btn.onclick = dial_history(to);
+	btn.onclick=function(){
+		dial_history(to);
+		};
+	/*	console.log("to-----",to)
+		//alert('новая обработка');
+		a = document.frm_myPhone.message.value;
+		ws.send("dial:"+a+"t09"+to);
+		};
+	*/	
+	mytr.cells[2].appendChild(btn);
+	mytr.cells[3].innerHTML = "";
+	mytr.cells[4].innerHTML = "";
+	return false
+};
+function dial09() {
+	from = document.frm_myPhone.message.value;
+	to = "09" + document.frm_dial09.message09.value;
+	console.log("dial:"+from + to);
+	//ws.send("dial:"+from+"t09"+to);
+	ws.send("dial:"+from+"t"+to);
+	mytr = tbl.insertRow(1);
+	mytr.insertCell();
+	mytr.insertCell();
+	mytr.insertCell();
+	mytr.insertCell();
+	mytr.insertCell();
+	mytr.cells[0].innerHTML = "Out->";
+	mytr.cells[1].innerHTML = Date();
+	mytr.cells[2].innerHTML = to;
+	var btn = document.createElement ('input');
+	btn.type = 'button';
+	btn.value = "✆";
+	//btn.onclick = dial_history(to);
+	btn.onclick=function(){
+		dial_history(to);
+		};
+	/*	console.log("to-----",to)
+		//alert('новая обработка');
+		a = document.frm_myPhone.message.value;
+		ws.send("dial:"+a+"t09"+to);
+		};
+	*/	
+	mytr.cells[2].appendChild(btn);
+	mytr.cells[3].innerHTML = "";
+	mytr.cells[4].innerHTML = "";	
+	return false
+};
+
+function hangup() {
+	var m = document.frm_myPhone.message.value;
+	console.log("hangup:" + m);
+	ws.send("hangup:" + m);
+	return false;
+};
+
+
+function clear_tbl() {
+	tbl.innerHTML="";
+	tbl.innerHTML="<tbody><tr><td>Callid</td><td>Number</td><td>To</td><td>State</td><td>Packets</td></tr></tbody>";
+	return false;
+};
+
+function init() {
+	console.log("init");
+	document.frm_myPhone.message.value = getCookie("MyPhone");
+	if (ws != null) {
+		ws.close();
+		ws = nill;
+	}
+	var msg = document.getElementById("msg");
+	ws = new WebSocket("ws://{{.Host}}/ws");
+	ws.onopen = function() {
+		console.log("WebSocket opened")
+		state.innerHTML = "connected"
+		state.style.backgroundColor = "green"
+	};
+	ws.onclose = function(evt) {
+		console.log("connection close");
+		state.innerHTML = "closed" + evt
+		state.style.backgroundColor = "red"
+	};
+	ws.onmessage = function(evt) {
+		if (tbl.rows.length >= 400) tbl.deleteRow(400); //
+		/*
+		s = evt.data;
+		tr = tbl.insertRow();
+		tr.innerHTML = evt.data;
+		if (tbl.rows.length > 400) tbl.deleteRow(1);
+		console.log(s)
+		*/
+		var jmsg = JSON.parse(evt.data);
+		//console.log(jmsg);
+		switch(jmsg.Intype) {
+		case "Call":
+			console.log(jmsg);
+			AddMessage(evt.data)
+			break;
+		case "Message":
+			AddMessage(evt.data);
+			break;
+		case "Stats":
+			console.log("stats=", jmsg.Dialogs);
+			//stats.innerHTML = "dialogs="+ jmsg.Dialogs +" InterfaceDropped=" + jmsg.InterfaceDropped + " WebDropped=" + jmsg.WebDropped + "Trancated=" + jmsg.Truncated;
+			stats.innerHTML = jmsg.Text
+			break
+		case "Point":
+			console.log("Point=", jmsg);
+			addpoint(jmsg.X, jmsg.Y);
+			break;
+		case "Err":
+			console.log("error", jmsg);
+			alert(jmsg.Text);
+		}
+	};
+	ws.onError = function(evt) {
+		console.log("error")
+		state.innerHTML = "error" + evt
+		state.style.backgroundColor = "red"
+	};
+};
+function AddMessage(s) {
+	jmsg = JSON.parse(s);
+	//id = jmsg.Uniqueid;
+	if (jmsg.Uniqueid == "") {return;}
+	mytr = tbl.insertRow(1);
+	mytr.insertCell();
+	mytr.insertCell();
+	mytr.insertCell();
+	mytr.insertCell();
+	mytr.insertCell();
+/*	if (document.getElementById(id) == null) {
+		//console.log("absent");
+		newtr = tbl.insertRow(0);
+		newtr.id = id;
+		newtr.insertCell();
+		newtr.insertCell();
+		newtr.insertCell();
+		newtr.insertCell();
+		newtr.insertCell();
+	} else {
+		//console.log("exists");
+	};
+*/	
+	//mytr = document.getElementById(id);
+	mytr.cells[0].innerHTML = jmsg.Uniqueid;
+	mytr.cells[1].innerHTML = jmsg.DateTime;
+	mytr.cells[2].innerHTML = jmsg.Calleridnum
+	mytr.cells[3].innerHTML = jmsg.Calleridname
+	mytr.cells[4].innerHTML += jmsg.Status;
+	if (jmsg.Status=="DialBegin") {
+		mytr.cells[4].bgColor = "yellow";
+	} else if (jmsg.Status=="Rejected") {
+		mytr.cells[4].bgColor = "red";
+	} else if (jmsg.Status=="Setup") {
+		mytr.cells[4].bgColor = "yellow";
+	} else if (jmsg.Status=="Canceled") {
+		mytr.cells[4].bgColor = "blue";
+	}
+	//mytr.cells[4].innerHTML = "<details>" + jmsg.Trace + "</details>";
+	//mytr.cells[4].innerHTML += jmsg.RawMsg ;
+};
+
+function addpoint(x, y) {
+	var svg = document.getElementById('svg1');
+	var point = svg.createSVGPoint();
+	point.x = x;
+	point.y = y;
+	var polyline= document.getElementById('p1');
+	polyline.points.appendItem(point);
+};
+
+function disconnect() {
+	console.log("close websocket connection");
+	ws.close()
+	return false;
+};
+
+function reconnect() {
+	console.log("reload page");
+	location.reload()
+	return false;
+};
+function show_hide(obj_id) {
+doc=document.getElementById(obj_id);
+if(doc.style.display == "none") doc.style.display = "block";
+else doc.style.display = "none"
+}
+
+</script>
+
+
+</head>
+<body onLoad="init();">
+<div id="state" style=float:left>disconnected</div>
+<div style=float:left>
+<form name="closeWs" action="#" onsubmit="return disconnect();">
+	<input type="submit" value="disconnect">
+</form>
+</div>
+<div style=float:left>
+<form name="reload" action="#" onsubmit="return reconnect();">
+	<input type="submit" value="Connect">
+</form>
+</div>
+<br><br>
+<br>
+
+
+<form name="frm_myPhone" action="#" onsubmit="return sendPhone();">
+	My phone:
+	<input name="message" size=50% value=""/>
+	<input type="submit" value="Start">
+</form>
+<br>
+<div style=float:left>
+<form name="frm_dial" action="#" onsubmit="return dial();">
+Dial to:
+<input name="message" size=40% placeholder="0979502281054"/>
+<input type="submit" value="Dial">
+</form>
+</div>
+<div style=float:left>
+<form name="frm_hangup" action="#" onsubmit="return hangup();">
+<input type="submit" value="Hangup">
+</form>
+</div>
+<br><br><br>
+<div style=float:left>
+<form name="frm_dial09" action="#" onsubmit="return dial09();">
+Dial to:<b>09</b>
+<input name="message09" size=40% placeholder="79502281054"/>
+<input type="submit" value="Dial">
+</form>
+</div>
+<div style=float:left>
+<form name="frm_hangup" action="#" onsubmit="return hangup();">
+<input type="submit" value="Hangup" style="font-size:32px">
+</form>
+</div>
+<br><br>
+<br><br><br>
+</div>
+<div style=float:left>
+<form name="clear_form" action="#" onsubmit="return clear_tbl();">
+<input type="submit" value="clear">
+</form>
+</div>
+<br><br><br>
+<hr>
+<div>{{.Data}}</div>
+<div id="stats">stats</div>
+
+<a onclick="show_hide('diagram1'); return false;" href="javascript:void(0)">Diagram current dialogs</a>
+<div id="diagram1" style="display: none;">
+
+<?xml version="1.0" encoding="utf-8" ?>
+<svg id=svg1 height="330" version="1.1" width="720" xmlns="http://www.w3.org/2000/svg">
+<!-- подписи по оси y -->
+
+<text fill="#333" font-family="Tahoma" font-size="9px" text-anchor="end" x="15px" y="305px">0</text>
+<text fill="#333" font-family="Tahoma" font-size="9px" text-anchor="end" x="15px" y="285px">20</text>
+<text fill="#333" font-family="Tahoma" font-size="9px" text-anchor="end" x="15px" y="265px">40</text>
+<text fill="#333" font-family="Tahoma" font-size="9px" text-anchor="end" x="15px" y="245px">60</text>
+<text fill="#333" font-family="Tahoma" font-size="9px" text-anchor="end" x="15px" y="225px">80</text>
+<text fill="#333" font-family="Tahoma" font-size="9px" text-anchor="end" x="15px" y="205px">100</text>
+<text fill="#333" font-family="Tahoma" font-size="9px" text-anchor="end" x="15px" y="185px">120</text>
+<text fill="#333" font-family="Tahoma" font-size="9px" text-anchor="end" x="15px" y="165px">140</text>
+<text fill="#333" font-family="Tahoma" font-size="9px" text-anchor="end" x="15px" y="145px">160</text>
+<text fill="#333" font-family="Tahoma" font-size="9px" text-anchor="end" x="15px" y="125px">180</text>
+<text fill="#333" font-family="Tahoma" font-size="9px" text-anchor="end" x="15px" y="105px">200</text>
+<text fill="#333" font-family="Tahoma" font-size="9px" text-anchor="end" x="15px" y="85px">220</text>
+<text fill="#333" font-family="Tahoma" font-size="9px" text-anchor="end" x="15px" y="65px">240</text>
+<text fill="#333" font-family="Tahoma" font-size="9px" text-anchor="end" x="15px" y="45px">260</text>
+<text fill="#333" font-family="Tahoma" font-size="9px" text-anchor="end" x="15px" y="25px">280</text>
+
+<!-- подписи по оси x -->
+
+<text fill="#333" font-family="Tahoma" font-size="9px" text-anchor="middle" x="50px" y="310px">1:00</text>
+<text fill="#333" font-family="Tahoma" font-size="9px" text-anchor="middle" x="80px" y="310px">2:00</text>
+<text fill="#333" font-family="Tahoma" font-size="9px" text-anchor="middle" x="110px" y="310px">3:00</text>
+<text fill="#333" font-family="Tahoma" font-size="9px" text-anchor="middle" x="140px" y="310px">4:00</text>
+<text fill="#333" font-family="Tahoma" font-size="9px" text-anchor="middle" x="170px" y="310px">5:00</text>
+<text fill="#333" font-family="Tahoma" font-size="9px" text-anchor="middle" x="200px" y="310px">6:00</text>
+<text fill="#333" font-family="Tahoma" font-size="9px" text-anchor="middle" x="230px" y="310px">7:00</text>
+<text fill="#333" font-family="Tahoma" font-size="9px" text-anchor="middle" x="260px" y="310px">8:00</text>
+<text fill="#333" font-family="Tahoma" font-size="9px" text-anchor="middle" x="290px" y="310px">9:00</text>
+<text fill="#333" font-family="Tahoma" font-size="9px" text-anchor="middle" x="320px" y="310px">10:00</text>
+<text fill="#333" font-family="Tahoma" font-size="9px" text-anchor="middle" x="350px" y="310px">11:00</text>
+<text fill="#333" font-family="Tahoma" font-size="9px" text-anchor="middle" x="380px" y="310px">12:00</text>
+<text fill="#333" font-family="Tahoma" font-size="9px" text-anchor="middle" x="410px" y="310px">13:00</text>
+<text fill="#333" font-family="Tahoma" font-size="9px" text-anchor="middle" x="440px" y="310px">14:00</text>
+<text fill="#333" font-family="Tahoma" font-size="9px" text-anchor="middle" x="470px" y="310px">15:00</text>
+<text fill="#333" font-family="Tahoma" font-size="9px" text-anchor="middle" x="500px" y="310px">16:00</text>
+<text fill="#333" font-family="Tahoma" font-size="9px" text-anchor="middle" x="530px" y="310px">17:00</text>
+<text fill="#333" font-family="Tahoma" font-size="9px" text-anchor="middle" x="560px" y="310px">18:00</text>
+<text fill="#333" font-family="Tahoma" font-size="9px" text-anchor="middle" x="590px" y="310px">19:00</text>
+<text fill="#333" font-family="Tahoma" font-size="9px" text-anchor="middle" x="620px" y="310px">20:00</text>
+<text fill="#333" font-family="Tahoma" font-size="9px" text-anchor="middle" x="650px" y="310px">21:00</text>
+<text fill="#333" font-family="Tahoma" font-size="9px" text-anchor="middle" x="680px" y="310px">22:00</text>
+<text fill="#333" font-family="Tahoma" font-size="9px" text-anchor="middle" x="710px" y="310px">23:00</text>
+
+<g transform="translate(20,300) scale(0.5,-1)">
+<!-- оси -->
+<line x1="0" y1="0" x2="1440" y2="0" stroke="#888" stroke-width="2" />
+<line x1="0" y1="0" x2="0" y2="330" stroke="#888" stroke-width="4" />
+<!-- сетка -->
+
+<line stroke="#888" stroke-opacity="0.5" stroke-width="1.0" x1="-5px" x2="1440px" y1="0px" y2="0px" />
+<line stroke="#888" stroke-opacity="0.5" stroke-width="1.0" x1="-5px" x2="1440px" y1="20px" y2="20px" />
+<line stroke="#888" stroke-opacity="0.5" stroke-width="1.0" x1="-5px" x2="1440px" y1="40px" y2="40px" />
+<line stroke="#888" stroke-opacity="0.5" stroke-width="1.0" x1="-5px" x2="1440px" y1="60px" y2="60px" />
+<line stroke="#888" stroke-opacity="0.5" stroke-width="1.0" x1="-5px" x2="1440px" y1="80px" y2="80px" />
+<line stroke="#888" stroke-opacity="0.5" stroke-width="1.0" x1="-5px" x2="1440px" y1="100px" y2="100px" />
+<line stroke="#888" stroke-opacity="0.5" stroke-width="1.0" x1="-5px" x2="1440px" y1="120px" y2="120px" />
+<line stroke="#888" stroke-opacity="0.5" stroke-width="1.0" x1="-5px" x2="1440px" y1="140px" y2="140px" />
+<line stroke="#888" stroke-opacity="0.5" stroke-width="1.0" x1="-5px" x2="1440px" y1="160px" y2="160px" />
+<line stroke="#888" stroke-opacity="0.5" stroke-width="1.0" x1="-5px" x2="1440px" y1="180px" y2="180px" />
+<line stroke="#888" stroke-opacity="0.5" stroke-width="1.0" x1="-5px" x2="1440px" y1="200px" y2="200px" />
+<line stroke="#888" stroke-opacity="0.5" stroke-width="1.0" x1="-5px" x2="1440px" y1="220px" y2="220px" />
+<line stroke="#888" stroke-opacity="0.5" stroke-width="1.0" x1="-5px" x2="1440px" y1="240px" y2="240px" />
+<line stroke="#888" stroke-opacity="0.5" stroke-width="1.0" x1="-5px" x2="1440px" y1="260px" y2="260px" />
+<line stroke="#888" stroke-opacity="0.5" stroke-width="1.0" x1="-5px" x2="1440px" y1="280px" y2="280px" />
+<line stroke="#888" stroke-opacity="0.5" stroke-width="1.0" x1="-5px" x2="1440px" y1="300px" y2="300px" />
+<line stroke="#888" stroke-opacity="0.5" stroke-width="1.0" x1="-5px" x2="1440px" y1="320px" y2="320px" />
+
+<line stroke="#888" stroke-opacity="0.5" stroke-width="2.0" x1="0px" x2="0px" y1="-6px" y2="310px" />
+<line stroke="#888" stroke-opacity="0.5" stroke-width="2.0" x1="60px" x2="60px" y1="-6px" y2="310px" />
+<line stroke="#888" stroke-opacity="0.5" stroke-width="2.0" x1="120px" x2="120px" y1="-6px" y2="310px" />
+<line stroke="#888" stroke-opacity="0.5" stroke-width="2.0" x1="180px" x2="180px" y1="-6px" y2="310px" />
+<line stroke="#888" stroke-opacity="0.5" stroke-width="2.0" x1="240px" x2="240px" y1="-6px" y2="310px" />
+<line stroke="#888" stroke-opacity="0.5" stroke-width="2.0" x1="300px" x2="300px" y1="-6px" y2="310px" />
+<line stroke="#888" stroke-opacity="0.5" stroke-width="2.0" x1="360px" x2="360px" y1="-6px" y2="310px" />
+<line stroke="#888" stroke-opacity="0.5" stroke-width="2.0" x1="420px" x2="420px" y1="-6px" y2="310px" />
+<line stroke="#888" stroke-opacity="0.5" stroke-width="2.0" x1="480px" x2="480px" y1="-6px" y2="310px" />
+<line stroke="#888" stroke-opacity="0.5" stroke-width="2.0" x1="540px" x2="540px" y1="-6px" y2="310px" />
+<line stroke="#888" stroke-opacity="0.5" stroke-width="2.0" x1="600px" x2="600px" y1="-6px" y2="310px" />
+<line stroke="#888" stroke-opacity="0.5" stroke-width="2.0" x1="660px" x2="660px" y1="-6px" y2="310px" />
+<line stroke="#888" stroke-opacity="0.5" stroke-width="2.0" x1="720px" x2="720px" y1="-6px" y2="310px" />
+<line stroke="#888" stroke-opacity="0.5" stroke-width="2.0" x1="780px" x2="780px" y1="-6px" y2="310px" />
+<line stroke="#888" stroke-opacity="0.5" stroke-width="2.0" x1="840px" x2="840px" y1="-6px" y2="310px" />
+<line stroke="#888" stroke-opacity="0.5" stroke-width="2.0" x1="900px" x2="900px" y1="-6px" y2="310px" />
+<line stroke="#888" stroke-opacity="0.5" stroke-width="2.0" x1="960px" x2="960px" y1="-6px" y2="310px" />
+<line stroke="#888" stroke-opacity="0.5" stroke-width="2.0" x1="1020px" x2="1020px" y1="-6px" y2="310px" />
+<line stroke="#888" stroke-opacity="0.5" stroke-width="2.0" x1="1080px" x2="1080px" y1="-6px" y2="310px" />
+<line stroke="#888" stroke-opacity="0.5" stroke-width="2.0" x1="1140px" x2="1140px" y1="-6px" y2="310px" />
+<line stroke="#888" stroke-opacity="0.5" stroke-width="2.0" x1="1200px" x2="1200px" y1="-6px" y2="310px" />
+<line stroke="#888" stroke-opacity="0.5" stroke-width="2.0" x1="1260px" x2="1260px" y1="-6px" y2="310px" />
+<line stroke="#888" stroke-opacity="0.5" stroke-width="2.0" x1="1320px" x2="1320px" y1="-6px" y2="310px" />
+<line stroke="#888" stroke-opacity="0.5" stroke-width="2.0" x1="1380px" x2="1380px" y1="-6px" y2="310px" />
+
+<!-- график -->
+
+<polyline id=p1 fill="none" points="" stroke="#965929" stroke-width="2px" />
+<!--
+<polyline id=p2 fill="none" points="2,6 4,1 6,2 8,7 10,14 12,18 14,14 16,21 18,19 20,36 22,37 24,40 26,52 28,29 30,62 32,43 34,37 36,40 38,55 40,72 42,78 44,77 46,88 48,69 50,95 52,96 54,80 56,88 58,89 60,75 62,90 64,44 66,36 68,78 70,62 72,83 74,41 76,58 78,41 80,120 82,148 84,108 86,56 88,47 90,196 92,72 94,151 96,181 98,64 100,17 102,14 104,19 106,20 108,137 110,56 112,79 114,136 116,177 118,19 120,135 122,174 124,100 126,145 128,106 130,96 132,195 134,166 136,60 138,19 140,169 142,19 144,52 146,128 148,172 150,79 152,79 154,65 156,93 158,43 160,97 162,144 164,151 166,82 168,83 170,148 172,32 174,148 176,138 178,18 180,167 182,180 184,79 186,150 188,156 190,45 192,154 194,11 196,24 198,127 "  stroke="#A19F3D" stroke-width="2px" />
+<polyline id=p3 fill="none" points="6,3 4,1 40,90 90,8"  stroke="#AA0011" stroke-width="5px" />
+<polyline id=poly1 fill="none" points="6,3 4,1 40,90 90,8"  stroke="#AA0011" stroke-width="5px" />
+<polyline id=poly2 fill="none" points="6,3 4,1 40,90 90,8"  stroke="#11AA11" stroke-width="5px" />
+-->
+</g>
+<!-- дата -->
+<text fill="#333" font-family="Tahoma" font-size="7" text-anchor="end" x="720.0px" y="15px">2014-11-07 17:27:05</text>
+<!-- легенда -->
+<text fill="#965929" font-family="Tahoma" font-size="9" x="20.0px" y="325px">― Outgoing</text>
+<text fill="#005929" font-family="Tahoma" font-size="9" x="80.0px" y="325px">― Incoming</text>
+</svg>
+</div>
+
+
+<hr>
+<table id="tbl" border=1>
+
+
+<tbody>
+<tr id="row1"><td>Callid</td><td>Date</td><td>From</td><td>Name</td><td>State</td></tr>
+</tbody>
+</table>
+
+<hr>
+
+
+
+</body>
+</html>
